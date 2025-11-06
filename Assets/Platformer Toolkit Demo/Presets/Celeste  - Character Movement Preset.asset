@@ -17,12 +17,12 @@ MonoBehaviour:
   _topSpeed: 9.01
   _decel: 76
   _turnSpeed: 76
-  _jumpHeight: 2.25
-  _timeToApex: 0.38
-  _DMM: 5.23
+  _jumpHeight: 2.96
+  _timeToApex: 0.329
+  _DMM: 2.25
   _airControl: 80
   _airControlActual: 80
   _airBrake: 80
   _variableJH: 1
-  _jumpCutoff: 5.23
+  _jumpCutoff: 1.43
   _doubleJump: 0

@@ -22,7 +22,7 @@ namespace GMTK.PlatformerToolkit {
 
         [Header("Options")]
         [Tooltip("Should the character drop when you let go of jump?")] public bool variablejumpHeight;
-        [SerializeField, Range(1f, 10f)][Tooltip("Gravity multiplier when you let go of jump")] public float jumpCutOff;
+        [SerializeField, Range(0f, 10f)][Tooltip("Gravity multiplier when you let go of jump")] public float jumpCutOff;
         [SerializeField][Tooltip("The fastest speed the character can fall")] public float speedLimit;
         [SerializeField, Range(0f, 0.3f)][Tooltip("How long should coyote time last?")] public float coyoteTime = 0.15f;
         [SerializeField, Range(0f, 0.3f)][Tooltip("How far from ground should we cache your jump?")] public float jumpBuffer = 0.15f;
@@ -43,6 +43,8 @@ namespace GMTK.PlatformerToolkit {
         public bool onGround;
         private bool currentlyJumping;
         private bool slowFalling;
+        private CharacterShoot characterShoot;
+        private bool wasOnGround;
 
         void Awake() {
             //Find the character's Rigidbody and ground detection and juice scripts
@@ -50,6 +52,7 @@ namespace GMTK.PlatformerToolkit {
             body = GetComponent<Rigidbody2D>();
             ground = GetComponent<characterGround>();
             juice = GetComponentInChildren<characterJuice>();
+            characterShoot = GetComponent<CharacterShoot>();
             defaultGravityScale = 1f;
         }
 
@@ -60,8 +63,12 @@ namespace GMTK.PlatformerToolkit {
                 //When we press the jump button, tell the script that we desire a jump.
                 //Also, use the started and canceled contexts to know if we're currently holding the button
                 if (context.started) {
+                    //If we're in the air and have no jumps left, enable slow falling
                     if (!onGround && !canJumpAgain) {
-                        slowFalling = true;
+                        // We only enable slow fall if the player can shoot, linking the mechanics
+                        if (characterShoot != null && characterShoot.CanShoot()) {
+                            slowFalling = true;
+                        }
                     }
                     else {
                         desiredJump = true;
@@ -81,6 +88,26 @@ namespace GMTK.PlatformerToolkit {
 
             //Check if we're on ground, using Kit's Ground script
             onGround = ground.GetOnGround();
+
+            // If we are on the ground, we should never be in the slow fall state.
+            if (onGround) {
+                slowFalling = false;
+            }
+
+            //If the player just landed, reload their ammo
+            if (onGround && !wasOnGround) {
+                if (characterShoot != null) {
+                    characterShoot.Reload();
+                }
+            }
+            wasOnGround = onGround;
+
+            // If we are in the slow fall state, try to shoot automatically
+            if (slowFalling) {
+                if (characterShoot != null) {
+                    characterShoot.TryShootDownwards();
+                }
+            }
 
             //Jump buffer allows us to queue up a jump, which will play when we next hit the ground
             if (jumpBuffer > 0) {
