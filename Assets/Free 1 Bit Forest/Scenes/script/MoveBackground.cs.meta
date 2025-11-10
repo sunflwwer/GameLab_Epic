@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ecfcf1302b7d33a488d32f90c55b0457
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 232615
+  packageName: Free 1 Bit Forest
+  packageVersion: 1.0
+  assetPath: Assets/Free 1 Bit Forest/Scenes/script/MoveBackground.cs
+  uploadId: 525591

@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "Player Actions",
     "maps": [
         {
@@ -18,7 +19,7 @@
                     "name": "Toolkit",
                     "type": "Button",
                     "id": "0cec30aa-54dd-4da1-b451-d8bb1712e097",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -27,7 +28,7 @@
                     "name": "Jump",
                     "type": "Value",
                     "id": "6e703ba4-d99d-4c70-86ed-e32c8a1a8c5b",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
@@ -64,6 +65,24 @@
                     "type": "Button",
                     "id": "f1352a80-a7ab-4470-9f2b-635fe482ef58",
                     "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Primary",
+                    "type": "Button",
+                    "id": "4fe754ec-23ba-4ed6-837a-5f93a23d18fd",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Secondary",
+                    "type": "Button",
+                    "id": "d526d5e4-83c2-4dda-b865-2657cdaefe9d",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -309,6 +328,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "Quit",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ad5921fb-507f-472b-8438-150bc7e87d41",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Primary",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "136473c0-7540-463f-b09f-3daa74305085",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Secondary",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -28,7 +28,17 @@ namespace GMTK.PlatformerToolkit {
         [SerializeField, Range(0f, 0.3f)][Tooltip("How far from ground should we cache your jump?")] public float jumpBuffer = 0.15f;
         [SerializeField, Range(0.1f, 1f)][Tooltip("Multiplier to apply when slowing down a fall")] public float slowFallMultiplier = 0.5f;
 
+        /*[Header("Slow-Fall Gauge")]
+        [SerializeField, Tooltip("슬로우 최대치(권장: 10)")] private float slowMax = 10f;
+        [SerializeField, Tooltip("초기 슬로우 잔량")]        private float slowCurrent = 10f;
+        [SerializeField, Tooltip("슬로우 사용시 초당 소모량")] private float slowDrainPerSec = 3f;
+        [SerializeField, Tooltip("지상 시 초당 회복량")]       private float slowRegenPerSec = 5f;
+        [SerializeField, Tooltip("슬로우 시작에 필요한 최소 잔량")] private float slowStartThreshold = 0.1f;
+        [SerializeField, Tooltip("UI 표시(선택)")] private SlowUI slowUI;*/
 
+        [SerializeField, Tooltip("위로 상승하는 최대 속도 상한")]
+        private float upwardSpeedLimit = 12f;  // 원하면 인스펙터에서 조절
+        
         [Header("Calculations")]
         public float jumpSpeed;
         private float defaultGravityScale;
@@ -54,60 +64,113 @@ namespace GMTK.PlatformerToolkit {
             juice = GetComponentInChildren<characterJuice>();
             characterShoot = GetComponent<CharacterShoot>();
             defaultGravityScale = 1f;
+            
+            //if (slowUI != null) slowUI.Init(slowMax, slowCurrent);
         }
 
-        public void OnJump(InputAction.CallbackContext context) {
-            //This function is called when one of the jump buttons (like space or the A button) is pressed.
+public void OnJump(InputAction.CallbackContext context) {
+    if (!movementLimiter.instance.CharacterCanMove) return;
 
-            if (movementLimiter.instance.CharacterCanMove) {
-                //When we press the jump button, tell the script that we desire a jump.
-                //Also, use the started and canceled contexts to know if we're currently holding the button
-                if (context.started) {
-                    //If we're in the air and have no jumps left, enable slow falling
-                    if (!onGround && !canJumpAgain) {
-                        // We only enable slow fall if the player can shoot, linking the mechanics
-                        if (characterShoot != null && characterShoot.CanShoot()) {
-                            slowFalling = true;
-                        }
-                    }
-                    else {
-                        desiredJump = true;
-                    }
-                    pressingJump = true;
-                }
-
-                if (context.canceled) {
-                    pressingJump = false;
-                    slowFalling = false;
-                }
-            }
+    if (context.started) {
+        // 지상 점프 또는 공중 추가점프 허용일 때: 점프
+        if (onGround || canJumpAgain) {
+            desiredJump = true;           // ← 점프 큐
+            pressingJump = true;
+            return;
         }
+        
+        // 공중에서 스페이스: 탄약이 있으면 즉발 1발 + 슬로우 시작
+        if (characterShoot != null && characterShoot.CanShoot()) {
+            characterShoot.TryShootDownwards();   // 즉발 1발
+            slowFalling = true;                   // 탄약 소진 시까지 Update에서 유지
+        } else {
+            slowFalling = false;                  // 탄약 없으면 슬로우 시작 못함
+        }
+
+        /*// 공중일 때: 스페이스 누르면 총 발사(아래 방향)
+        // 필요 시 CanShoot/게이지 조건 추가
+        if (characterShoot != null && characterShoot.CanShoot()) {
+            characterShoot.TryShootDownwards();  // ← 네가 쓰는 실제 발사 함수로 교체
+        }
+
+        // 옵션: 공중에서 스페이스 시 슬로우 낙하 시작(원하면 유지)
+        if (slowCurrent > slowStartThreshold) {
+            slowFalling = true;
+        } else {
+            slowFalling = false;
+        }*/
+
+        pressingJump = true;
+    }
+
+    if (context.canceled) {
+        pressingJump = false;
+        slowFalling = false;   // 스페이스 떼면 슬로우 낙하 종료
+    }
+}
+
 
         void Update() {
             setPhysics();
 
-            //Check if we're on ground, using Kit's Ground script
             onGround = ground.GetOnGround();
 
-            // If we are on the ground, we should never be in the slow fall state.
+            /*// 지상에서는 슬로우 강제 해제 + 게이지 회복
             if (onGround) {
                 slowFalling = false;
             }
+            // 공중 + 슬로우 중이면 게이지 소모
+            else if (slowFalling) {
+                slowCurrent -= slowDrainPerSec * Time.deltaTime;
+                if (slowCurrent <= 0f) {
+                    slowCurrent = 0f;
+                    slowFalling = false; // 소진되면 자동 해제
+                }
+            }
 
-            //If the player just landed, reload their ammo
+            // UI 갱신
+            if (slowUI != null) slowUI.UpdateSlow(slowCurrent, slowMax);
+
+            // 착지 시 탄약 리로드
             if (onGround && !wasOnGround) {
+                slowFalling = false;
+                slowCurrent = slowMax;
+                if (slowUI != null) slowUI.UpdateSlow(slowCurrent, slowMax);
+
                 if (characterShoot != null) {
                     characterShoot.Reload();
                 }
             }
             wasOnGround = onGround;
 
-            // If we are in the slow fall state, try to shoot automatically
+            // 필요 시 슬로우 중 자동 사격 로직(주석 유지)
             if (slowFalling) {
                 if (characterShoot != null) {
                     characterShoot.TryShootDownwards();
                 }
+            }*/
+            
+            // 지상: 슬로우 강제 해제
+            if (onGround) {
+                slowFalling = false;
             }
+// 공중: 슬로우 유지 조건 = 탄약 존재
+            else if (slowFalling) {
+                if (characterShoot != null && characterShoot.CanShoot()) {
+                    characterShoot.TryShootDownwards();   // fireRate에 맞춰 자동 발사
+                } else {
+                    slowFalling = false;                   // 탄약 0 → 즉시 종료
+                }
+            }
+
+// 착지 시: 슬로우 해제 + 리로드
+            if (onGround && !wasOnGround) {
+                slowFalling = false;
+                if (characterShoot != null) {
+                    characterShoot.Reload();
+                }
+            }
+
 
             //Jump buffer allows us to queue up a jump, which will play when we next hit the ground
             if (jumpBuffer > 0) {
@@ -215,7 +278,10 @@ namespace GMTK.PlatformerToolkit {
 
             //Set the character's Rigidbody's velocity
             //But clamp the Y variable within the bounds of the speed limit, for the terminal velocity assist option
-            body.linearVelocity = new Vector3(velocity.x, Mathf.Clamp(velocity.y, -speedLimit, 100));
+            body.linearVelocity = new Vector3(
+                velocity.x,
+                Mathf.Clamp(velocity.y, -speedLimit, upwardSpeedLimit)
+            );
         }
 
         private void DoAJump() {
@@ -258,8 +324,10 @@ namespace GMTK.PlatformerToolkit {
         }
 
         public void bounceUp(float bounceAmount) {
-            //Used by the springy pad
-            body.AddForce(Vector2.up * bounceAmount, ForceMode2D.Impulse);
+            var v = body.linearVelocity;
+            float newVy = Mathf.Min(v.y + bounceAmount, upwardSpeedLimit);
+            body.linearVelocity = new Vector2(v.x, newVy);
         }
+
     }
 }

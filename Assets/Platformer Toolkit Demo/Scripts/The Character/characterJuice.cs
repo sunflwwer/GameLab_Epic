@@ -46,25 +46,100 @@ namespace GMTK.PlatformerToolkit {
         [Header("Platformer Toolkit Stuff")]
         [SerializeField] jumpTester jumpLine;
         public bool cameraFalling = false;
+        
+        [Header("Run Rotate")]
+        [SerializeField] private bool enableRunRotate = true;
+        // 회전 대상(애니메이터의 부모 피벗). 비워두면 Start에서 자동 생성
+        [SerializeField] private Transform rotateRoot;
+        [SerializeField, Tooltip("오른쪽 달릴 때 -각도, 왼쪽 +각도(도)")]
+        private float runRotateAngle = 12f;
+        [SerializeField, Tooltip("회전 속도(도/초)")]
+        private float runRotateSpeed = 720f;
+        [SerializeField, Tooltip("달리기로 판단할 최소 X속도")]
+        private float minRunSpeed = 0.2f;
+        [SerializeField, Tooltip("점프 중엔 각도를 이 배율만큼만 적용(0~1)")]
+        private float airAngleMultiplier = 0.7f;
 
         void Start() {
             moveScript = GetComponent<characterMovement>();
             jumpScript = GetComponent<characterJump>();
+
+            // 1) 애니메이터 없어도 동작하도록 우선 characterSprite로 지정
+            if (rotateRoot == null) {
+                if (characterSprite != null) {
+                    rotateRoot = characterSprite.transform;
+                } else {
+                    rotateRoot = transform; // 최후 대안
+                }
+            }
+
+            // 2) 애니메이터가 있을 때만 Pivot 생성 (선택사항)
+            if (myAnimator != null && rotateRoot == myAnimator.transform) {
+                var spriteTf = myAnimator.transform;
+                var pivot = new GameObject("RotatePivot").transform;
+                pivot.SetParent(spriteTf.parent, worldPositionStays: true);
+                pivot.position = spriteTf.position;
+                pivot.rotation = spriteTf.rotation;
+                pivot.localScale = spriteTf.localScale;
+                spriteTf.SetParent(pivot, worldPositionStays: true);
+                rotateRoot = pivot;
+            }
         }
 
-        void Update() {
-            tiltCharacter();
 
-            //We need to change the character's running animation to suit their current speed
+        void Update() {
+            // tiltCharacter(); // 비활성
+
             runningSpeed = Mathf.Clamp(Mathf.Abs(moveScript.velocity.x), 0, maxSpeed);
-            myAnimator.SetFloat("runSpeed", runningSpeed);
+            if (myAnimator != null) {
+                myAnimator.SetFloat("runSpeed", runningSpeed);
+            }
 
             checkForLanding();
-
             checkForGoingPastJumpLine();
         }
 
-        private void tiltCharacter() {
+        public void jumpEffects() {
+            if (jumpSFX && jumpSFX.enabled) jumpSFX.Play();
+
+            if (!jumpSqueezing && jumpSqueezeMultiplier > 1f) {
+                StartCoroutine(JumpSqueeze(
+                    jumpSquashSettings.x / jumpSqueezeMultiplier,
+                    jumpSquashSettings.y * jumpSqueezeMultiplier,
+                    jumpSquashSettings.z, 0, true));
+            }
+
+            if (jumpParticles) jumpParticles.Play();
+        }
+
+        
+        // Animator가 회전값을 나중에 덮어쓰지 못하도록 LateUpdate에서 회전 적용
+        void LateUpdate() {
+            if (enableRunRotate) RunRotateLate();
+        }
+        
+        private void RunRotateLate() {
+            if (rotateRoot == null) return;
+
+            float vx = moveScript.velocity.x;
+            float targetZ = 0f;
+
+            // 달릴 때 기울기 제거: 지상에서는 항상 0도
+            if (!jumpScript.onGround && Mathf.Abs(vx) > minRunSpeed) {
+                // 공중에서만 좌/우 기울임
+                targetZ = (vx > 0f) ? -runRotateAngle : runRotateAngle;
+                targetZ *= airAngleMultiplier; // 공중 배율
+            }
+
+            var targetRot = Quaternion.Euler(0f, 0f, targetZ);
+            rotateRoot.rotation = Quaternion.RotateTowards(
+                rotateRoot.rotation,
+                targetRot,
+                runRotateSpeed * Time.deltaTime
+            );
+        }
+
+        /*private void tiltCharacter() {
             //See which direction the character is currently running towards, and tilt in that direction
             float directionToTilt = 0;
             if (moveScript.velocity.x != 0) {
@@ -76,7 +151,7 @@ namespace GMTK.PlatformerToolkit {
 
             //And then rotate the character in that direction
             myAnimator.transform.rotation = Quaternion.RotateTowards(myAnimator.transform.rotation, Quaternion.Euler(-targetRotVector), tiltSpeed * Time.deltaTime);
-        }
+        }*/
 
         private void checkForLanding() {
             if (!playerGrounded && jumpScript.onGround) {
@@ -88,7 +163,9 @@ namespace GMTK.PlatformerToolkit {
                 jumpLine.characterY = transform.position.y;
 
                 //Play an animation, some particles, and a sound effect when the player lands
-                myAnimator.SetTrigger("Landed");
+                //myAnimator.SetTrigger("Landed");
+                if (myAnimator != null) myAnimator.SetTrigger("Landed");
+
                 landParticles.Play();
 
                 if (!landSFX.isPlaying && landSFX.enabled) {
@@ -121,7 +198,7 @@ namespace GMTK.PlatformerToolkit {
             }
         }
 
-        public void jumpEffects() {
+        /*public void jumpEffects() {
             //Play these effects when the player jumps, courtesy of jump script
             myAnimator.ResetTrigger("Landed");
             myAnimator.SetTrigger("Jump");
@@ -137,7 +214,7 @@ namespace GMTK.PlatformerToolkit {
             }
 
             jumpParticles.Play();
-        }
+        }*/
 
         IEnumerator JumpSqueeze(float xSqueeze, float ySqueeze, float seconds, float dropAmount, bool jumpSqueeze) {
             //We log that the player is squashing/stretching, so we don't do these calculations more than once

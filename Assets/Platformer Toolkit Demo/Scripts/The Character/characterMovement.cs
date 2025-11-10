@@ -4,10 +4,10 @@ using UnityEngine.InputSystem.Interactions;
 
 namespace GMTK.PlatformerToolkit {
     //This script handles moving the character on the X axis, both on the ground and in the air.
-
     public class characterMovement : MonoBehaviour {
 
         [Header("Components")]
+        [SerializeField] private Transform visualRoot;
 
         private Rigidbody2D body;
         characterGround ground;
@@ -38,100 +38,82 @@ namespace GMTK.PlatformerToolkit {
         public bool onGround;
         public bool pressingKey;
 
+        // ▼▼▼ 추가: 스킬용 페이싱 API
+        [Header("Facing API")]
+        [SerializeField] private Transform facingOverride; // 필요 시 visualRoot 대신 지정
+        public Transform FacingTransform => facingOverride ? facingOverride : (visualRoot ? visualRoot : transform);
+        public float FacingDirX {
+            get {
+                float sx = FacingTransform.localScale.x;
+                return Mathf.Sign(sx == 0 ? 1 : sx);
+            }
+        }
+        // ▲▲▲
+
         private void Awake() {
-            //Find the character's Rigidbody and ground detection script
             body = GetComponent<Rigidbody2D>();
             ground = GetComponent<characterGround>();
         }
 
         public void OnMovement(InputAction.CallbackContext context) {
-            //This is called when you input a direction on a valid input type, such as arrow keys or analogue stick
-            //The value will read -1 when pressing left, 0 when idle, and 1 when pressing right.
-
             if (movementLimiter.instance.CharacterCanMove) {
                 directionX = context.ReadValue<float>();
             }
         }
 
         private void Update() {
-            //Used to stop movement when the character is playing her death animation
-            if (!movementLimiter.instance.CharacterCanMove) {
-                directionX = 0;
-            }
+            if (!movementLimiter.instance.CharacterCanMove) directionX = 0;
 
-            //Used to flip the character's sprite when she changes direction
-            //Also tells us that we are currently pressing a direction button
             if (directionX != 0) {
-                transform.localScale = new Vector3(directionX > 0 ? 1 : -1, 1, 1);
+                // 그래픽만 좌우 반전(무기는 회전 영향 안 받음)
+                if (visualRoot != null) {
+                    visualRoot.localScale = new Vector3(directionX > 0 ? 1 : -1, 1, 1);
+                } else {
+                    // 백업: 정말 필요할 때만 루트 반전
+                    transform.localScale = new Vector3(directionX > 0 ? 1 : -1, 1, 1);
+                }
                 pressingKey = true;
-            }
-            else {
+            } else {
                 pressingKey = false;
             }
 
-            //Calculate's the character's desired velocity - which is the direction you are facing, multiplied by the character's maximum speed
-            //Friction is not used in this game
             desiredVelocity = new Vector2(directionX, 0f) * Mathf.Max(maxSpeed - friction, 0f);
-
         }
 
         private void FixedUpdate() {
-            //Fixed update runs in sync with Unity's physics engine
-
-            //Get Kit's current ground status from her ground script
             onGround = ground.GetOnGround();
-
-            //Get the Rigidbody's current velocity
             velocity = body.linearVelocity;
 
-            //Calculate movement, depending on whether "Instant Movement" has been checked
             if (useAcceleration) {
                 runWithAcceleration();
             }
             else {
-                if (onGround) {
-                    runWithoutAcceleration();
-                }
-                else {
-                    runWithAcceleration();
-                }
+                if (onGround) runWithoutAcceleration();
+                else runWithAcceleration();
             }
         }
 
         private void runWithAcceleration() {
-            //Set our acceleration, deceleration, and turn speed stats, based on whether we're on the ground on in the air
-
             acceleration = onGround ? maxAcceleration : maxAirAcceleration;
             deceleration = onGround ? maxDecceleration : maxAirDeceleration;
-            turnSpeed = onGround ? maxTurnSpeed : maxAirTurnSpeed;
+            turnSpeed   = onGround ? maxTurnSpeed   : maxAirTurnSpeed;
 
             if (pressingKey) {
-                //If the sign (i.e. positive or negative) of our input direction doesn't match our movement, it means we're turning around and so should use the turn speed stat.
                 if (Mathf.Sign(directionX) != Mathf.Sign(velocity.x)) {
                     maxSpeedChange = turnSpeed * Time.deltaTime;
-                }
-                else {
-                    //If they match, it means we're simply running along and so should use the acceleration stat
+                } else {
                     maxSpeedChange = acceleration * Time.deltaTime;
                 }
-            }
-            else {
-                //And if we're not pressing a direction at all, use the deceleration stat
+            } else {
                 maxSpeedChange = deceleration * Time.deltaTime;
             }
 
-            //Move our velocity towards the desired velocity, at the rate of the number calculated above
             velocity.x = Mathf.MoveTowards(velocity.x, desiredVelocity.x, maxSpeedChange);
-
-            //Update the Rigidbody with this new velocity
             body.linearVelocity = velocity;
-
         }
 
         private void runWithoutAcceleration() {
-            //If we're not using acceleration and deceleration, just send our desired velocity (direction * max speed) to the Rigidbody
             velocity.x = desiredVelocity.x;
-
             body.linearVelocity = velocity;
         }
     }

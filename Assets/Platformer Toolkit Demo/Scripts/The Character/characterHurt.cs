@@ -1,13 +1,9 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using DG.Tweening;
 using UnityEngine.Events;
-
+using UnityEngine.SceneManagement;  // ← 추가
 
 namespace GMTK.PlatformerToolkit {
-    //This script handles the character being killed and respawning
-
     public class characterHurt : MonoBehaviour {
         [Header("Components")]
         [SerializeField] Vector3 checkpointFlag;
@@ -18,10 +14,9 @@ namespace GMTK.PlatformerToolkit {
         [SerializeField] public SpriteRenderer spriteRenderer;
         [SerializeField] movementLimiter myLimit;
 
-
         [Header("Settings")]
-        [SerializeField] float respawnTime;
-        [SerializeField] private float flashDuration;
+        [SerializeField] float respawnTime = 1.0f;   // 리스타트까지 대기 시간(초)
+        [SerializeField] private float flashDuration = 0.1f;
 
         [Header("Events")]
         [SerializeField] public UnityEvent onHurt = new UnityEvent();
@@ -35,51 +30,59 @@ namespace GMTK.PlatformerToolkit {
         }
 
         public void newCheckpoint(Vector3 flagPos) {
-            //When the player touches a checkpoint, it passes its position to this script
             checkpointFlag = flagPos;
         }
 
         private void OnCollisionEnter2D(Collision2D collision) {
-            //If the player hits layer 7 (saw blade) or 8 (spikes), start the hurt routine
+            // 레이어 7/8에 닿으면 데미지 처리(예전 로직 유지)
             if (collision.gameObject.layer == 7 || collision.gameObject.layer == 8) {
-                if (hurting == false) {
-                    //If it's spikes, stop the character's velocity
+                if (!hurting) {
                     if (collision.gameObject.layer == 8) {
                         body.linearVelocity = Vector2.zero;
                     }
-
                     hurting = true;
                     hurtRoutine();
                 }
             }
         }
 
-
         public void hurtRoutine() {
-            myLimit.CharacterCanMove = false;
+            // 잘못된 가드 → 올바르게 수정
+            // if (hurting == false) return;  // ❌ 이러면 대부분 바로 return됨
+            if (hurting) return;               // ✅ 중복 진입 방지
+            hurting = true;                    // ✅ 이제부터 '죽음 처리 중' 플래그
 
-            //The screenshake is played in a Unity Event, provided the option is turned on
+            if (myLimit) myLimit.CharacterCanMove = false;
+
             onHurt?.Invoke();
+            if (hurtSFX) hurtSFX.Play();
 
-            hurtSFX.Play();
-
+            // 짧은 히트스톱(Realtime)
             Stop(0.1f);
-            myAnim.SetTrigger("Hurt");
-            Flash();
 
-            //Start a timer, before respawning the player. This uses the (excellent) free Unity asset DOTween
-            float timer = 0;
-            DOTween.To(() => timer, x => timer = x, 1, respawnTime).OnComplete(respawnRoutine);
+            // 씬 리로드 코루틴 시작(Realtime)
+            StartCoroutine(ReloadSceneAfterDelay(respawnTime));
         }
 
-        //These three functions handle the hit stop effect, where the game pauses for a brief moment on death
+
+        private IEnumerator ReloadSceneAfterDelay(float delay) {
+            // 리스타트 대기 (타임스케일 무시)
+            yield return new WaitForSecondsRealtime(delay);
+
+            // 혹시 멈춰있을 수도 있으니 원복
+            Time.timeScale = 1f;
+
+            // 현재 활성 씬 재로딩
+            var active = SceneManager.GetActiveScene();
+            SceneManager.LoadScene(active.buildIndex);
+        }
+
         public void Stop(float duration) {
             Stop(duration, 0.0f);
         }
 
         public void Stop(float duration, float timeScale) {
-            if (waiting)
-                return;
+            if (waiting) return;
             Time.timeScale = timeScale;
             StartCoroutine(Wait(duration));
         }
@@ -91,35 +94,27 @@ namespace GMTK.PlatformerToolkit {
             waiting = false;
         }
 
-        //These two functions handle the flashing white effect when Kit dies
+        // 아래는 현재 미사용(애니메이션/플래시)
         public void Flash() {
-            if (flashRoutine != null) {
-                StopCoroutine(flashRoutine);
-            }
-
+            if (flashRoutine != null) StopCoroutine(flashRoutine);
             flashRoutine = StartCoroutine(FlashRoutine());
         }
 
         private IEnumerator FlashRoutine() {
-            // Show the flash
             spriteRenderer.enabled = true;
-
-            // Pause the execution of this function for "duration" seconds.
             yield return new WaitForSeconds(flashDuration);
-
-            // Hide the flash
             spriteRenderer.enabled = false;
-
-            // Set the routine to null, signaling that it's finished.
             flashRoutine = null;
         }
 
-        //After the timer ends, respawn Kit at the nearest checkpoint and let her move again
+        // 더 이상 체크포인트 리스폰을 쓰지 않으므로 호출되지 않게 유지
         private void respawnRoutine() {
-            transform.position = checkpointFlag;
-            myLimit.CharacterCanMove = true;
-            myAnim.SetTrigger("Okay");
-            hurting = false;
+            // 이전 방식(체크포인트 복귀)은 사용하지 않음
+            // transform.position = checkpointFlag;
+            // myLimit.CharacterCanMove = true;
+            // if (myAnim) myAnim.SetTrigger("Okay");
+            // hurting = false;
+            // GetComponent<PlayerHealth2D>()?.RestoreFull();
         }
     }
 }
