@@ -55,6 +55,9 @@ namespace GMTK.PlatformerToolkit {
         private bool slowFalling;
         private CharacterShoot characterShoot;
         private bool wasOnGround;
+        
+        // 외부에서 slowFalling 상태 확인용
+        public bool IsSlowFalling => slowFalling;
 
         void Awake() {
             //Find the character's Rigidbody and ground detection and juice scripts
@@ -76,14 +79,16 @@ public void OnJump(InputAction.CallbackContext context) {
         if (onGround || canJumpAgain) {
             desiredJump = true;           // ← 점프 큐
             pressingJump = true;
+            slowFalling = false;          // 점프 시 슬로우 강제 해제
             return;
         }
         
         // 공중에서 스페이스: 탄약이 있으면 즉발 1발 + 슬로우 시작
-        if (characterShoot != null && characterShoot.CanShoot()) {
+        // 단, 이미 slowFalling 중이면 중복 발사 방지
+        if (!slowFalling && characterShoot != null && characterShoot.CanShoot()) {
             characterShoot.TryShootDownwards();   // 즉발 1발
             slowFalling = true;                   // 탄약 소진 시까지 Update에서 유지
-        } else {
+        } else if (characterShoot != null && !characterShoot.CanShoot()) {
             slowFalling = false;                  // 탄약 없으면 슬로우 시작 못함
         }
 

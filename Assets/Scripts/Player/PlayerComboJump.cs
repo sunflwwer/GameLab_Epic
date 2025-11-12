@@ -46,6 +46,10 @@ namespace GMTK.PlatformerToolkit
             if (!jump) return false;
             if (Time.time - lastBounceTime < minInterval) return false;
 
+            // slowFalling(공중 슬로우 모드) 중에는 바운스 금지
+            // 이렇게 하면 좌클릭+우클릭 동시 입력 시 의도치 않은 높이 뛰기 방지
+            if (jump.IsSlowFalling) return false;
+
             // 콤보일 때는 상승 중 제한을 우회할 수 있게
             if (!isComboNow || !comboBypassFalling)
             {
