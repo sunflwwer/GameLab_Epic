@@ -22,6 +22,10 @@ public class EnemyHealth2D : MonoBehaviour
 
     private EnemyVFX2D vfx;
 
+    // 외부에서 체력 정보 읽기용
+    public int CurrentHealth => current;
+    public int MaxHealth => maxHealth;
+
     private void Awake()
     {
         current = maxHealth;

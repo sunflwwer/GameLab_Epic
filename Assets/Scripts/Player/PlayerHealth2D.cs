@@ -1,4 +1,4 @@
-using System;                        // ← 이벤트용
+using System;
 using GMTK.PlatformerToolkit;
 using UnityEngine;
 
@@ -24,12 +24,14 @@ public class PlayerHealth2D : MonoBehaviour, IHittable
     [SerializeField] private PlayerVFX2D vfx;
 
     private characterHurt hurt; // 리스폰 루틴 연동용
+    private PlayerSkills playerSkills; // 스킬 매니저 참조
 
     private void Awake()
     {
         currentHp = maxHp;
         if (!vfx) vfx = GetComponent<PlayerVFX2D>();
-        hurt = GetComponent<GMTK.PlatformerToolkit.characterHurt>();
+        hurt = GetComponent<characterHurt>();
+        playerSkills = GetComponent<PlayerSkills>();
         RaiseHealthChanged();    // 초기값 브로드캐스트
     }
 
@@ -69,6 +71,14 @@ public class PlayerHealth2D : MonoBehaviour, IHittable
     // ===== IHittable 구현 =====
     public void Hit(int damage, Vector3 hitPoint)
     {
+        // 방패가 활성화되어 있으면 총알 무시
+        var shield = playerSkills?.ShieldSkill;
+        if (shield != null && shield.IsBlocking)
+        {
+            Debug.Log("[PlayerHealth] 방패로 총알 차단!");
+            return;
+        }
+        
         TakeDamage(damage);
     }
 

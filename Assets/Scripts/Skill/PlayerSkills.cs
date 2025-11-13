@@ -18,6 +18,9 @@ namespace GMTK.PlatformerToolkit
         
         private movementLimiter limiter;
 
+        // 외부에서 방패 스킬 접근용
+        public ShieldBlockSkill ShieldSkill => shieldSkill as ShieldBlockSkill;
+
         private void Awake()
         {
             limiter = GetComponent<movementLimiter>();

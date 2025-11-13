@@ -83,14 +83,14 @@ public void OnJump(InputAction.CallbackContext context) {
             return;
         }
         
-        // 공중에서 스페이스: 탄약이 있으면 즉발 1발 + 슬로우 시작
+        /*// 공중에서 스페이스: 탄약이 있으면 즉발 1발 + 슬로우 시작
         // 단, 이미 slowFalling 중이면 중복 발사 방지
         if (!slowFalling && characterShoot != null && characterShoot.CanShoot()) {
             characterShoot.TryShootDownwards();   // 즉발 1발
             slowFalling = true;                   // 탄약 소진 시까지 Update에서 유지
         } else if (characterShoot != null && !characterShoot.CanShoot()) {
             slowFalling = false;                  // 탄약 없으면 슬로우 시작 못함
-        }
+        }*/
 
         /*// 공중일 때: 스페이스 누르면 총 발사(아래 방향)
         // 필요 시 CanShoot/게이지 조건 추가
@@ -159,22 +159,22 @@ public void OnJump(InputAction.CallbackContext context) {
             if (onGround) {
                 slowFalling = false;
             }
-// 공중: 슬로우 유지 조건 = 탄약 존재
+/*// 공중: 슬로우 유지 조건 = 탄약 존재
             else if (slowFalling) {
                 if (characterShoot != null && characterShoot.CanShoot()) {
                     characterShoot.TryShootDownwards();   // fireRate에 맞춰 자동 발사
                 } else {
                     slowFalling = false;                   // 탄약 0 → 즉시 종료
                 }
-            }
+            }*/
 
-// 착지 시: 슬로우 해제 + 리로드
+/*// 착지 시: 슬로우 해제 + 리로드
             if (onGround && !wasOnGround) {
                 slowFalling = false;
                 if (characterShoot != null) {
                     characterShoot.Reload();
                 }
-            }
+            }*/
 
 
             //Jump buffer allows us to queue up a jump, which will play when we next hit the ground

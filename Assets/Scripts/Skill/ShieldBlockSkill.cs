@@ -55,6 +55,9 @@ public class ShieldBlockSkill : SkillBase
     private bool  isBlocking;
     private float nextCheck;
 
+    // 외부에서 방패 활성화 상태 확인용
+    public bool IsBlocking => isBlocking;
+
     protected override void OnActivate(Transform caster)
     {
         if (!holdToBlock)
@@ -130,6 +133,7 @@ public class ShieldBlockSkill : SkillBase
                     var bullet = h.GetComponentInParent<EnemyBullet2D>();
                     if (bullet != null)
                     {
+                        Debug.Log("[Shield] 총알 차단 성공!");
                         Destroy(bullet.gameObject);
                         blockedBullet = true;
                         continue;
